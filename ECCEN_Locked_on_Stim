@@ -1,65 +1,63 @@
 clear all;clc;
-Path='E:\ECCEN\';
-Subjects={'08_WuFang','16_Zhang_Cong'};
+Path='';
+Subjects={''};
 Files={'Eccen'};
 for ordsub=1%2:length(Subjects)
     Working_Path=[Path,Subjects{ordsub}];
     data=[];
     for ordfile=1%1:length(Files)
     %% raw data preprocessing in eeglab
-    % ½«.m00Êı¾İµ¼Èëeeglab
+    % import .m00 data
     [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
     [EEG, com] = pop_importNihonKodenM00(fullfile(Working_Path,'\RAW_m00\',[Files{ordfile},'.m00']));
     EEG = eeg_checkset( EEG );
     
-    %ÓÃº¯Êıget_nkheader.m »ñÈ¡raw dataÖĞµÄµç¼«ĞÅÏ¢
+    %get electrode information using get_nkheader.m
     [ntpoints,nchannels,bsweep,sampintms,binsuV,start_time,ch_names]=get_nkheader(fullfile(Working_Path,'\RAW_m00\',[Files{ordfile},'.m00']));
     
-    %½«µç¼«Ãû³Æch_namesµ¼ÈëeeglabµÄÎÄ¼ş½á¹¹ÖĞ
+    %å°†ç”µæåç§°ch_nameså¯¼å…¥eeglabçš„æ–‡ä»¶ç»“æ„ä¸­
     for i=1:size(ch_names,1)
         EEG.chanlocs(i).labels=ch_names(i,:);
     end
     
     [ALLEEG EEG CURRENTSET] = eeg_store(ALLEEG, EEG, CURRENTSET);
     EEG = eeg_checkset( EEG );
-    
-    % ÂËÊĞµç50hz×óÓÒ
-    % ÓĞµÄ²¡·¿ÊĞµçÓ°ÏìºÜ´ó£¬¿ÉÂËÉÔ¿íÒ»µã£¬ÈçÏÂ£º47-53hz
-    %     EEG = pop_eegfiltnew(EEG, 47, 53, [], 1, [], 1);
-    %     [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, CURRENTSET, 'overwrite', 'on', 'gui', 'off');
-    %     EEG = eeg_checkset( EEG );
-    
-    %  ½«ÓÃ DC09 DC10 DC11 DC12 ±êÊ¾µÄ¶ş½øÖÆĞÅºÅ×ª»¯³ÉÊ®½øÖÆmark
-    % ÓÃº¯Êıtransf_mark.m½øĞĞ×ª»»
+  
+    %  å°†ç”¨ DC09 DC10 DC11 DC12 æ ‡ç¤ºçš„äºŒè¿›åˆ¶ä¿¡å·è½¬åŒ–æˆåè¿›åˆ¶mark
+    % ç”¨å‡½æ•°transf_mark.mè¿›è¡Œè½¬æ¢
     cd 'E:\MOTION\';
     EventTmp = transf_mark(EEG);
-    EEG.event = EventTmp; %½«×ª»»µÄmark´æµ½EEGLAB½á¹¹ÖĞ
+    EEG.event = EventTmp; %å°†è½¬æ¢çš„markå­˜åˆ°EEGLABç»“æ„ä¸­
     EEG = eeg_checkset(EEG);
     [ALLEEG, EEG, CURRENTSET] = eeg_store (ALLEEG, EEG, 0);
     
-    % ×îºó±£´æ³ÉĞÂµÄdataset ¡®filename_ori.set¡¯
+    % æœ€åä¿å­˜æˆæ–°çš„dataset â€˜filename_ori.setâ€™
     mkdir(Working_Path,'\Raw_Set_File\');
     cd(fullfile(Working_Path,'\Raw_Set_File\'));
     [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, CURRENTSET, 'savenew', [Files{ordfile},'_Ori.set'], 'gui', 'off');
     EEG = eeg_checkset( EEG );
+    
     %% load eeglab data and transfer to fieldtrip
     cd(fullfile(Working_Path,'Raw_Set_File\'));
-    % path='C:\Users\Lu Shen\Documents\SEEGÊı¾İÔ¤´¦Àí';
+    
+    % 
     datapath=pwd;
     clear data;
     data = eeglab2fieldtrip (EEG, 'preprocessing', 'none');
     data.label=strtrim(data.label);
-    %%
+    
+    %% convert event format
     event=[];
     for i=1:size(EEG.event,2)
         event(i).value=str2num(EEG.event(i).type);
-        event(i).type='MIB';
+        event(i).type='';
         event(i).latency=EEG.event(i).latency;
         event(i).sample=EEG.event(i).latency;
         event(i).offset = 0;
         event(i).duration = 0;
     end;
     data.event=event;
+    
     %% read header info
     clear hdr;
     hdr.nChans              = size(EEG.chanlocs,2);
@@ -73,6 +71,7 @@ for ordsub=1%2:length(Subjects)
     data.hdr=hdr;
     mkdir(Working_Path,'\FT_File\');
     save([Working_Path,'\FT_File\','FT_Data_',Files{ordfile},'.mat'],'data');
+    
     %% bipolar montage
     % define bipolar labels
     k = [];
